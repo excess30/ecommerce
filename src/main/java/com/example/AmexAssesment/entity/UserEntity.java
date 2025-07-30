@@ -17,7 +17,7 @@ public class UserEntity {
     private String password;
 
     @Column(nullable = false)
-    private String role; // CUSTOMER or ADMIN
+    private String role;
 
     @Column
     private String email;
@@ -27,4 +27,7 @@ public class UserEntity {
 
     @Column
     private String phone;
+
+    @Column
+    private Long cartId;
 } 

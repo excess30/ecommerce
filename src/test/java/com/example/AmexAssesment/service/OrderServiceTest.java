@@ -18,6 +18,7 @@ class OrderServiceTest {
     @Mock private OrderItemRepository orderItemRepository;
     @Mock private UserRepository userRepository;
     @Mock private CartRepository cartRepository;
+    @Mock private ProductRepository productRepository;
     @InjectMocks private OrderServiceImpl orderService;
 
     @BeforeEach
@@ -27,17 +28,39 @@ class OrderServiceTest {
     void testPlaceOrder_Success() {
         UserEntity user = new UserEntity(); user.setId(1L);
         CartEntity cart = new CartEntity(); cart.setId(1L);
+        ProductEntity product = new ProductEntity(); product.setId(1L); product.setQuantity(5);
         CartItemEntity item = new CartItemEntity();
-        ProductEntity product = new ProductEntity(); product.setId(1L);
         item.setProduct(product); item.setQuantity(2);
         cart.setItems(new ArrayList<>(Collections.singletonList(item)));
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(cartRepository.findById(1L)).thenReturn(Optional.of(cart));
         when(orderRepository.save(any(OrderEntity.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(productRepository.save(any(ProductEntity.class))).thenAnswer(i -> i.getArguments()[0]);
+
         OrderEntity order = orderService.placeOrder(1L, 1L);
+
         assertNotNull(order);
         assertEquals(user, order.getUser());
         assertEquals(1, order.getItems().size());
+        // Product quantity should be decremented
+        assertEquals(3, product.getQuantity());
+        verify(productRepository, times(1)).save(product);
+    }
+
+    @Test
+    void testPlaceOrder_InsufficientStock() {
+        UserEntity user = new UserEntity(); user.setId(1L);
+        CartEntity cart = new CartEntity(); cart.setId(1L);
+        ProductEntity product = new ProductEntity(); product.setId(1L); product.setProductName("Test Product"); product.setQuantity(1);
+        CartItemEntity item = new CartItemEntity();
+        item.setProduct(product); item.setQuantity(2);
+        cart.setItems(new ArrayList<>(Collections.singletonList(item)));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(cartRepository.findById(1L)).thenReturn(Optional.of(cart));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> orderService.placeOrder(1L, 1L));
+        assertTrue(ex.getMessage().contains("Insufficient quantity"));
+        verify(productRepository, never()).save(any());
     }
 
     @Test
@@ -70,4 +93,4 @@ class OrderServiceTest {
         int totalOrdered = item1.getQuantity() + item2.getQuantity();
         assertTrue(totalOrdered > stock, "Total ordered exceeds stock!");
     }
-} 
+}

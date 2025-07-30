@@ -12,10 +12,9 @@ public class CartController {
     private CartService cartService;
 
     @PostMapping("/add")
-    public CartEntity addToCart(@RequestParam(required = false) Long cartId,
-                                @RequestParam Long productId,
+    public CartEntity addToCart(@RequestParam Long userId, @RequestParam Long productId,
                                 @RequestParam int quantity) {
-        return cartService.addToCart(cartId, productId, quantity);
+        return cartService.addToCart(userId, productId, quantity);
     }
 
     @GetMapping("/view")

@@ -18,21 +18,33 @@ public class OrderServiceImpl implements OrderService {
     private UserRepository userRepository;
     @Autowired
     private CartRepository cartRepository;
+    @Autowired
+    private ProductRepository productRepository;
 
     @Override
     public OrderEntity placeOrder(Long userId, Long cartId) {
-        UserEntity user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-        CartEntity cart = cartRepository.findById(cartId).orElseThrow(() -> new RuntimeException("Cart not found"));
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        CartEntity cart = cartRepository.findById(cartId)
+                .orElseThrow(() -> new RuntimeException("Cart not found"));
         if (cart.getItems().isEmpty()) throw new RuntimeException("Cart is empty");
         OrderEntity order = new OrderEntity();
         order.setUser(user);
         order.setStatus("PLACED");
         List<OrderItemEntity> orderItems = new ArrayList<>();
         for (CartItemEntity cartItem : cart.getItems()) {
+            ProductEntity product = cartItem.getProduct();
+            int orderQuantity = cartItem.getQuantity();
+            if (product.getQuantity() < orderQuantity) {
+                order.setStatus("REVERTED");
+                throw new RuntimeException("Insufficient quantity for product: " + product.getProductName());
+            }
+            product.setQuantity(product.getQuantity() - orderQuantity);
+            productRepository.save(product);
             OrderItemEntity orderItem = new OrderItemEntity();
             orderItem.setOrder(order);
-            orderItem.setProduct(cartItem.getProduct());
-            orderItem.setQuantity(cartItem.getQuantity());
+            orderItem.setProduct(product);
+            orderItem.setQuantity(orderQuantity);
             orderItems.add(orderItem);
         }
         order.setItems(orderItems);
